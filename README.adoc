@@ -1,0 +1,105 @@
+= Event RPC
+
+The JSON-RPC event based server.
+
+== Programming model
+
+The idea behind the extension is to enable you to write a JSON-RPC server fully based on CDI.
+All you need to do to add a handler is to decorate a method with `@JsonRpcMethod`.
+The parameters are handled in both object and array style (JSON-RPC supports both) and `@JsonRpcParam` enables to define how to map the JSON into the method call.
+The returned type can be a `CompletionStage` or an `Optional` but ensure to type the actual result (parameter of these parameterized types).
+Finally, `@JsonRpcMethod` enables to automatically map some exception to a real `JsonRpcException`.
+
+Here are some examples:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyRpcEndpoints {
+    @Inject
+    private MyService service;
+
+    @JsonRpcMethod("test1")
+    public String test1() {
+        return service.handle();
+    }
+
+    @JsonRpcMethod("test2")
+    public String simpleParams(@JsonRpcParam("e1") final String p1,
+                               @JsonRpcParam("e2") final int v2) {
+        return ">" + p1 + "," + v2 + "<";
+    }
+
+    @JsonRpcMethod("test3")
+    public String objectParam(final SomeModel input) {
+        return ">>" + input.data1 + "," + input.data2 + "<<";
+    }
+
+    @JsonRpcMethod("test4")
+    public SomeModel returnObject() {
+        final SomeModel model = new SomeModel();
+        model.data1 = "set1";
+        model.data2 = 1234;
+        return model;
+    }
+
+    @JsonRpcMethod("test5")
+    public CompletionStage<SomeModel> returnObjectStage() {
+        final SomeModel model = new SomeModel();
+        model.data1 = "set1";
+        model.data2 = 1234;
+        return completedFuture(model);
+    }
+}
+----
+
+TIP: if you don't run in a CDI container you have to initialize the `HandlerRegistry` programmatically calling `registerMethod()` manually.
+
+== Servlet deployment
+
+To deploy the server in a Servlet container, you must register `com.github.rmannibucau.eventrpc.servlet.JsonRpcServlet` servlet.
+
+TIP: if you don't run in a CDI container, you can still use it but you have to override `init()` method to initialize `handler` field programmatically.
+
+Here is a sample registration:
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="4.0"
+    xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://xmlns.jcp.org/xml/ns/javaee
+        http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd">
+
+    <servlet>
+       <servlet-name>JsonRpc</servlet-name>
+       <servlet-class>com.github.rmannibucau.eventrpc.servlet.JsonRpcServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+       <servlet-name>JsonRpc</servlet-name>
+       <url-pattern>/json-rpc</url-pattern>
+    </servlet-mapping>
+</web-app>
+----
+
+== Override default beans
+
+By default the implementation using an instance of `Jsonb` to serialize beans.
+You can change the default implementation - to enable prettifying for example - just by producing an instance with the qualifier `@JsonRpc`:
+
+[source,java]
+----
+@ApplicationScoped
+class EventRpcCustomizations {
+    @JsonRpc
+    @Produces
+    Jsonb jsonb() {
+      return new JsonbBuilder.create();
+    }
+}
+----
+
+
