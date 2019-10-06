@@ -1,4 +1,4 @@
-package com.github.rmannibucau.test.eventrpc.protocol;
+package com.github.rmannibucau.test.jsonrpc.protocol;
 
 import java.io.Writer;
 import java.util.function.BiConsumer;

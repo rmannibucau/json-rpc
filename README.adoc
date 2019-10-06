@@ -99,6 +99,11 @@ class EventRpcCustomizations {
     Jsonb jsonb() {
       return new JsonbBuilder.create();
     }
+
+    @Produces
+    Configuration config() {
+      return new Configuration();
+    }
 }
 ----
 

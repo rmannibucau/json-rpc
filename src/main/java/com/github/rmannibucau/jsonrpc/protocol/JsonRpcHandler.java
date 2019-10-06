@@ -1,4 +1,4 @@
-package com.github.rmannibucau.eventrpc.protocol;
+package com.github.rmannibucau.jsonrpc.protocol;
 
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
@@ -29,16 +29,14 @@ import javax.json.JsonValue;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbException;
 
-import com.github.rmannibucau.eventrpc.impl.HandlerRegistry;
-import com.github.rmannibucau.eventrpc.qualifier.JsonRpc;
+import com.github.rmannibucau.jsonrpc.configuration.Configuration;
+import com.github.rmannibucau.jsonrpc.impl.HandlerRegistry;
+import com.github.rmannibucau.jsonrpc.qualifier.JsonRpc;
 
 @ApplicationScoped
 public class JsonRpcHandler {
-    // todo: @ConfigProperty
-    private String jsonRpcVersion = "2.0";
-
-    // todo: @ConfigProperty
-    private long timeout = 30000;
+    @Inject
+    private Configuration configuration;
 
     @Inject
     @JsonRpc
@@ -73,7 +71,7 @@ public class JsonRpcHandler {
         });
         if (!asyncCallback.isPresent()) { // async is not possible, force sync call
             try {
-                promise.toCompletableFuture().get(timeout, MILLISECONDS);
+                promise.toCompletableFuture().get(configuration.getTimeout(), MILLISECONDS);
             } catch (final InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (final ExecutionException e) {
@@ -113,12 +111,8 @@ public class JsonRpcHandler {
             });
     }
 
-    public void setJsonRpcVersion(final String jsonRpcVersion) { // to use without cdi
-        this.jsonRpcVersion = jsonRpcVersion;
-    }
-
-    public void setTimeout(final long timeout) { // to use without cdi
-        this.timeout = timeout;
+    public void setConfiguration(final Configuration configuration) {
+        this.configuration = configuration;
     }
 
     public void setJsonb(final Jsonb jsonb) { // to use without cdi
@@ -131,7 +125,7 @@ public class JsonRpcHandler {
 
     private Response newResponse(String id) {
         final Response response = new Response();
-        response.setJsonrpc(jsonRpcVersion);
+        response.setJsonrpc(configuration.getJsonRpcVersion());
         response.setId(id);
         return response;
     }
@@ -156,7 +150,7 @@ public class JsonRpcHandler {
         if (pair.second != null) {
             return of(pair.second);
         }
-        if (!jsonRpcVersion.equals(pair.first)) {
+        if (!configuration.getJsonRpcVersion().equals(pair.first)) {
             return of(createResponse(-32600, "invalid jsonrpc version"));
         }
         final Pair<String, Response> method = ensurePresent(request, "method", -32601);
@@ -189,7 +183,7 @@ public class JsonRpcHandler {
         errorResponse.setMessage(message);
 
         final Response response = new Response();
-        response.setJsonrpc(jsonRpcVersion);
+        response.setJsonrpc(configuration.getJsonRpcVersion());
         response.setError(errorResponse);
         return response;
     }

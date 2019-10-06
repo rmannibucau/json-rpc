@@ -1,4 +1,4 @@
-package com.github.rmannibucau.eventrpc;
+package com.github.rmannibucau.jsonrpc;
 
 public final class JsonRpcMetadata {
     // TODO: filter to add version

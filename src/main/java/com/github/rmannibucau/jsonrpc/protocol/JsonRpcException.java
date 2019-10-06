@@ -1,4 +1,4 @@
-package com.github.rmannibucau.eventrpc.protocol;
+package com.github.rmannibucau.jsonrpc.protocol;
 
 import javax.json.JsonValue;
 

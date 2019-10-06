@@ -1,4 +1,4 @@
-package com.github.rmannibucau.eventrpc.impl;
+package com.github.rmannibucau.jsonrpc.impl;
 
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
@@ -30,9 +30,9 @@ import javax.json.JsonValue;
 import javax.json.bind.Jsonb;
 import javax.json.spi.JsonProvider;
 
-import com.github.rmannibucau.eventrpc.annotations.JsonRpcMethod;
-import com.github.rmannibucau.eventrpc.annotations.JsonRpcParam;
-import com.github.rmannibucau.eventrpc.protocol.JsonRpcException;
+import com.github.rmannibucau.jsonrpc.annotations.JsonRpcMethod;
+import com.github.rmannibucau.jsonrpc.annotations.JsonRpcParam;
+import com.github.rmannibucau.jsonrpc.protocol.JsonRpcException;
 
 @Vetoed
 public class HandlerRegistry {
@@ -49,7 +49,7 @@ public class HandlerRegistry {
 
     public void registerMethod(final Object bean, final Method method,
                                final JsonRpcMethod config, final JsonRpcParam[] params,
-                               final com.github.rmannibucau.eventrpc.annotations.JsonRpcException[] exceptions) {
+                               final com.github.rmannibucau.jsonrpc.annotations.JsonRpcException[] exceptions) {
         if (!method.isAccessible()) {
             method.setAccessible(true);
         }

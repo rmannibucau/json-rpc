@@ -1,4 +1,4 @@
-package com.github.rmannibucau.eventrpc.annotations;
+package com.github.rmannibucau.jsonrpc.annotations;
 
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;

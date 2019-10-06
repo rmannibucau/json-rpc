@@ -1,4 +1,4 @@
-package com.github.rmannibucau.eventrpc.impl.cdi;
+package com.github.rmannibucau.jsonrpc.impl.cdi;
 
 import static java.util.Optional.ofNullable;
 
@@ -30,18 +30,21 @@ import javax.json.bind.JsonbConfig;
 import javax.json.bind.config.PropertyOrderStrategy;
 import javax.json.spi.JsonProvider;
 
-import com.github.rmannibucau.eventrpc.annotations.JsonRpcException;
-import com.github.rmannibucau.eventrpc.annotations.JsonRpcMethod;
-import com.github.rmannibucau.eventrpc.annotations.JsonRpcParam;
-import com.github.rmannibucau.eventrpc.impl.HandlerRegistry;
-import com.github.rmannibucau.eventrpc.protocol.JsonRpcHandler;
-import com.github.rmannibucau.eventrpc.qualifier.JsonRpc;
+import com.github.rmannibucau.jsonrpc.annotations.JsonRpcException;
+import com.github.rmannibucau.jsonrpc.annotations.JsonRpcMethod;
+import com.github.rmannibucau.jsonrpc.annotations.JsonRpcParam;
+import com.github.rmannibucau.jsonrpc.configuration.Configuration;
+import com.github.rmannibucau.jsonrpc.configuration.MicroprofileInitializer;
+import com.github.rmannibucau.jsonrpc.impl.HandlerRegistry;
+import com.github.rmannibucau.jsonrpc.protocol.JsonRpcHandler;
+import com.github.rmannibucau.jsonrpc.qualifier.JsonRpc;
 
-public class EventRpcExtension implements Extension {
+public class JsonRpcExtension implements Extension {
     private static final JsonRpcException[] EMPTY_EXCEPTION_ARRAY = new JsonRpcException[0];
 
     // enables to override default instances just by producing it
     private Bean<Jsonb> jsonbBean;
+    private Bean<Configuration> configurationBean;
 
     private final HandlerRegistry registry = new HandlerRegistry();
     private final Map<Bean<?>, AnnotatedType<?>> rpcBeans = new HashMap<>();
@@ -50,7 +53,7 @@ public class EventRpcExtension implements Extension {
     void registerDefaultBeans(@Observes final BeforeBeanDiscovery beforeBeanDiscovery,
                               final BeanManager beanManager) {
         Stream.concat(
-                Stream.of(HandlerRegistry.class, JsonRpcHandler.class),
+                Stream.of(HandlerRegistry.class, JsonRpcHandler.class, Configuration.class),
                 tryLoad("com.github.rmannibucau.eventrpc.servlet.JsonRpcServlet"))
             .forEach(clazz -> beforeBeanDiscovery.addAnnotatedType(beanManager.createAnnotatedType(clazz)));
     }
@@ -66,6 +69,10 @@ public class EventRpcExtension implements Extension {
         if (bean.getQualifiers().contains(JsonRpc.Literal.INSTANCE)) {
             jsonbBean = bean;
         }
+    }
+
+    void captureConfiguration(@Observes final ProcessBean<Configuration> configurationProcessBean) {
+        configurationBean = configurationProcessBean.getBean();
     }
 
     void registerBeans(@Observes final AfterBeanDiscovery afterBeanDiscovery) {
@@ -85,6 +92,15 @@ public class EventRpcExtension implements Extension {
                             // no-op
                         }
                     });
+        }
+        if (configurationBean == null) {
+            afterBeanDiscovery.<Configuration>addBean()
+                    .id("event_rpc::configuration")
+                    .scope(ApplicationScoped.class)
+                    .qualifiers(Default.Literal.INSTANCE, Any.Literal.INSTANCE)
+                    .beanClass(Configuration.class)
+                    .types(Configuration.class, Object.class)
+                    .createWith(c -> MicroprofileInitializer.load(new Configuration()));
         }
         afterBeanDiscovery.<HandlerRegistry>addBean()
                 .id("event_rpc::registry")

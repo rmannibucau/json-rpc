@@ -1,4 +1,4 @@
-package com.github.rmannibucau.eventrpc.qualifier;
+package com.github.rmannibucau.jsonrpc.qualifier;
 
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;

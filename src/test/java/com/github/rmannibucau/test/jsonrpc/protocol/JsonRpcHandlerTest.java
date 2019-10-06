@@ -1,4 +1,4 @@
-package com.github.rmannibucau.test.eventrpc.protocol;
+package com.github.rmannibucau.test.jsonrpc.protocol;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,11 +13,11 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.bind.Jsonb;
 
-import com.github.rmannibucau.eventrpc.annotations.JsonRpcException;
-import com.github.rmannibucau.eventrpc.annotations.JsonRpcMethod;
-import com.github.rmannibucau.eventrpc.annotations.JsonRpcParam;
-import com.github.rmannibucau.eventrpc.protocol.JsonRpcHandler;
-import com.github.rmannibucau.eventrpc.qualifier.JsonRpc;
+import com.github.rmannibucau.jsonrpc.annotations.JsonRpcException;
+import com.github.rmannibucau.jsonrpc.annotations.JsonRpcMethod;
+import com.github.rmannibucau.jsonrpc.annotations.JsonRpcParam;
+import com.github.rmannibucau.jsonrpc.protocol.JsonRpcHandler;
+import com.github.rmannibucau.jsonrpc.qualifier.JsonRpc;
 
 import org.apache.openwebbeans.junit5.Cdi;
 import org.junit.jupiter.params.ParameterizedTest;

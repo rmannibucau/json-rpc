@@ -1,4 +1,4 @@
-package com.github.rmannibucau.eventrpc.servlet;
+package com.github.rmannibucau.jsonrpc.servlet;
 
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.github.rmannibucau.eventrpc.protocol.JsonRpcHandler;
+import com.github.rmannibucau.jsonrpc.protocol.JsonRpcHandler;
 
 // https://www.jsonrpc.org/specification
 public class JsonRpcServlet extends HttpServlet {
