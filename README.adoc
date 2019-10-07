@@ -1,4 +1,4 @@
-= Event RPC
+= JSON-RPC Server Support
 
 The JSON-RPC event based server.
 
