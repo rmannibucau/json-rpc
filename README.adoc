@@ -55,6 +55,27 @@ public class MyRpcEndpoints {
 
 TIP: if you don't run in a CDI container you have to initialize the `HandlerRegistry` programmatically calling `registerMethod()` manually.
 
+== Programmatic registration
+
+Using `HandlerRegistry` you can also register custom method not using the annotation based API:
+
+[source,java]
+----
+@Inject
+private HandlerRegistry registry;
+
+// register the method
+final HandlerRegistry.Unregisterable myMethod = registry.registerMethod(new Registration(
+    "custom",
+    JsonObject.class,
+    args -> Json.createObjectBuilder().add("message", "i am here").build(),
+    emptyList(),
+    emptyList()));
+// let it be used by the app and finally
+// unregister the method (optional if it is for the application full life time)
+myMethod.close();
+----
+
 == Servlet deployment
 
 To deploy the server in a Servlet container, you must register `com.github.rmannibucau.eventrpc.servlet.JsonRpcServlet` servlet.

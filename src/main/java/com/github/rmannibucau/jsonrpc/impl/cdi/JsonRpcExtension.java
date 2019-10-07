@@ -1,12 +1,15 @@
 package com.github.rmannibucau.jsonrpc.impl.cdi;
 
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toList;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -49,6 +52,7 @@ public class JsonRpcExtension implements Extension {
     private final HandlerRegistry registry = new HandlerRegistry();
     private final Map<Bean<?>, AnnotatedType<?>> rpcBeans = new HashMap<>();
     private final Collection<CreationalContext<?>> creationalContexts = new ArrayList<>();
+    private final Collection<HandlerRegistry.Unregisterable> registrations = new ArrayList<>();
 
     void registerDefaultBeans(@Observes final BeforeBeanDiscovery beforeBeanDiscovery,
                               final BeanManager beanManager) {
@@ -75,7 +79,7 @@ public class JsonRpcExtension implements Extension {
         configurationBean = configurationProcessBean.getBean();
     }
 
-    void registerBeans(@Observes final AfterBeanDiscovery afterBeanDiscovery) {
+    void registerBeans(@Observes final AfterBeanDiscovery afterBeanDiscovery, final BeanManager beanManager) {
         if (jsonbBean == null) {
             afterBeanDiscovery.<Jsonb>addBean()
                     .id("event_rpc::jsonb")
@@ -113,31 +117,33 @@ public class JsonRpcExtension implements Extension {
 
     void registerBeans(@Observes final AfterDeploymentValidation afterDeploymentValidation,
                        final BeanManager beanManager) {
-        final CreationalContext<Object> jsonbCC = beanManager.createCreationalContext(null);
-        final Bean<?> jsonbBeanLookup = beanManager.resolve(beanManager.getBeans(Jsonb.class, JsonRpc.Literal.INSTANCE));
-        registry.setJsonb(Jsonb.class.cast(beanManager.getReference(jsonbBeanLookup, Jsonb.class, jsonbCC)));
-        registry.setJsonProvider(JsonProvider.provider());
-        if (!beanManager.isNormalScope(jsonbBeanLookup.getScope())) {
-            creationalContexts.add(jsonbCC);
+        if (configurationBean == null) { // unlikely but just a guard
+            configurationBean = (Bean<Configuration>) beanManager.resolve(beanManager.getBeans(Configuration.class));
         }
+        if (!doLookup(beanManager, configurationBean).isActive()) {
+            return;
+        }
+
+        if (jsonbBean == null) { // unlikely but just a guard
+            jsonbBean = (Bean<Jsonb>) beanManager.resolve(beanManager.getBeans(Jsonb.class, JsonRpc.Literal.INSTANCE));
+        }
+        registry.setJsonb(doLookup(beanManager, jsonbBean));
+        registry.setJsonProvider(JsonProvider.provider());
 
         rpcBeans.forEach((bean, annotatedType) -> registerBean(beanManager, bean, annotatedType));
         rpcBeans.clear();
     }
 
     void cleanup(@Observes final BeforeShutdown beforeShutdown) {
-        creationalContexts.forEach(CreationalContext::release);
+        registrations.forEach(it -> safeRun(it::close));
+        creationalContexts.forEach(it -> safeRun(it::release));
     }
 
     private void registerBean(final BeanManager beanManager, final Bean<?> bean, final AnnotatedType<?> annotatedType) {
-        final CreationalContext<Object> creationalContext = beanManager.createCreationalContext(null);
-        final Object instance = beanManager.getReference(bean, bean.getBeanClass(), creationalContext);
-        if (!beanManager.isNormalScope(bean.getScope())) {
-            creationalContexts.add(creationalContext);
-        }
-        annotatedType.getMethods().stream()
+        final Object instance = doLookup(beanManager, bean);
+        registrations.addAll(annotatedType.getMethods().stream()
             .filter(method -> method.isAnnotationPresent(JsonRpcMethod.class))
-            .forEach(method -> registry.registerMethod(
+            .map(method -> registry.registerMethodReflect(
                     instance, method.getJavaMember(),
                     method.getAnnotation(JsonRpcMethod.class),
                     method.getParameters().stream()
@@ -145,7 +151,17 @@ public class JsonRpcExtension implements Extension {
                             .toArray(JsonRpcParam[]::new),
                     ofNullable(method.getAnnotations(JsonRpcException.class))
                             .map(a -> a.toArray(EMPTY_EXCEPTION_ARRAY))
-                            .orElse(EMPTY_EXCEPTION_ARRAY)));
+                            .orElse(EMPTY_EXCEPTION_ARRAY)))
+            .collect(toList()));
+    }
+
+    private <A> A doLookup(final BeanManager beanManager, final Bean<A> bean) {
+        final CreationalContext<A> creationalContext = beanManager.createCreationalContext(null);
+        final A instance = (A) beanManager.getReference(bean, bean.getBeanClass(), creationalContext);
+        if (!beanManager.isNormalScope(bean.getScope())) {
+            creationalContexts.add(creationalContext);
+        }
+        return instance;
     }
 
     private boolean hasRpcMethod(final Annotated annotated) {
@@ -163,5 +179,13 @@ public class JsonRpcExtension implements Extension {
                 return null;
             }
         }).filter(Objects::nonNull);
+    }
+
+    private void safeRun(final Runnable runnable) {
+        try {
+            runnable.run();
+        } catch (final RuntimeException re) {
+            Logger.getLogger(JsonRpcExtension.class.getName()).log(Level.SEVERE, re.getMessage(), re);
+        }
     }
 }

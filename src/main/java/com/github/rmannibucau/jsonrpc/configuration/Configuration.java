@@ -6,6 +6,15 @@ import javax.enterprise.inject.Vetoed;
 public class Configuration {
     private String jsonRpcVersion = "2.0";
     private long timeout = 30000L;
+    private boolean active = true;
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(final boolean active) {
+        this.active = active;
+    }
 
     public String getJsonRpcVersion() {
         return jsonRpcVersion;

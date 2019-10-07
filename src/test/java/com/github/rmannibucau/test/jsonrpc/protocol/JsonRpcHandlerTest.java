@@ -1,5 +1,6 @@
 package com.github.rmannibucau.test.jsonrpc.protocol;
 
+import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -11,15 +12,19 @@ import java.util.concurrent.CompletionStage;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonObject;
 import javax.json.bind.Jsonb;
 
 import com.github.rmannibucau.jsonrpc.annotations.JsonRpcException;
 import com.github.rmannibucau.jsonrpc.annotations.JsonRpcMethod;
 import com.github.rmannibucau.jsonrpc.annotations.JsonRpcParam;
+import com.github.rmannibucau.jsonrpc.impl.HandlerRegistry;
+import com.github.rmannibucau.jsonrpc.impl.Registration;
 import com.github.rmannibucau.jsonrpc.protocol.JsonRpcHandler;
 import com.github.rmannibucau.jsonrpc.qualifier.JsonRpc;
-
 import org.apache.openwebbeans.junit5.Cdi;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -27,6 +32,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 class JsonRpcHandlerTest {
     @Inject
     private JsonRpcHandler handler;
+
+    @Inject
+    private HandlerRegistry registry;
 
     @ParameterizedTest
     @CsvSource({
@@ -48,6 +56,22 @@ class JsonRpcHandlerTest {
                     "'200\n{\"jsonrpc\":\"2.0\",\"error\":{\"code\":2,\"message\":\"Bad argument...even if there is no param here\"}}'"
     })
     void handle(final String input, final String output) {
+        doHandle(input, output);
+    }
+
+    @Test
+    void manualRegistration() {
+        final HandlerRegistry.Unregisterable custom = registry.registerMethod(new Registration(
+                "custom",
+                JsonObject.class,
+                args -> Json.createObjectBuilder().add("message", "i am here").build(),
+                emptyList(),
+                emptyList()));
+        handle("{\"jsonrpc\":\"2.0\",\"method\":\"custom\"}", "200\n{\"jsonrpc\":\"2.0\",\"result\":{\"message\":\"i am here\"}}");
+        custom.close();
+    }
+
+    private void doHandle(final String input, final String output) {
         final ResponseHandler responseHandler = new ResponseHandler();
         try (final StringReader reader = new StringReader(input)) {
             handler.handle(reader, responseHandler, Optional::empty);
