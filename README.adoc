@@ -128,4 +128,7 @@ class EventRpcCustomizations {
 }
 ----
 
+== Documentation
 
+`com.github.rmannibucau.jsonrpc.documentation.AsciidoctorJsonRpcDocumentationGenerator` main enables to generate a documentation based on the annotations.
+It renders the documentation in `asciidoctor` and takes as parameter the title of the document, the list of classes and where to output the documentation (file path or `stdout`/`stderr`).
