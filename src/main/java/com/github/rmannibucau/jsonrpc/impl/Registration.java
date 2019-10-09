@@ -9,6 +9,7 @@ import java.util.function.Function;
 
 public class Registration {
     private final String jsonRpcMethod;
+    private final String documentation;
     private final Type returnedType;
     private final Function<Object[], Object> invoker;
     private final Collection<Parameter> parameters;
@@ -17,12 +18,18 @@ public class Registration {
     public Registration(final String jsonRpcMethod,
                         final Type returnedType, final Function<Object[], Object> invoker,
                         final Collection<Parameter> parameters,
-                        final Collection<ExceptionMapping> exceptionMappings) {
+                        final Collection<ExceptionMapping> exceptionMappings,
+                        final String documentation) {
         this.jsonRpcMethod = requireNonNull(jsonRpcMethod, "JSON-RPC method can't be null");
         this.returnedType = ofNullable(returnedType).orElse(Object.class);
         this.invoker = requireNonNull(invoker, "invoker can't be null");
         this.parameters = parameters;
         this.exceptionMappings = exceptionMappings;
+        this.documentation = documentation;
+    }
+
+    public String getDocumentation() {
+        return documentation;
     }
 
     public String getJsonRpcMethod() {
@@ -68,12 +75,19 @@ public class Registration {
         private final String name;
         private final int position;
         private final boolean required;
+        private final String documentation;
 
-        public Parameter(final Type type, final String name, final int position, final boolean required) {
+        public Parameter(final Type type, final String name, final int position, final boolean required,
+                         final String documentation) {
             this.type = type;
             this.name = name;
             this.position = position;
             this.required = required;
+            this.documentation = documentation;
+        }
+
+        public String getDocumentation() {
+            return documentation;
         }
 
         public Type getType() {

@@ -121,7 +121,8 @@ public class HandlerRegistry {
                             types[idx].getParameterizedType(),
                             param.map(JsonRpcParam::value).filter(it -> !it.isEmpty()).orElseGet(types[idx]::getName),
                             param.map(JsonRpcParam::position).filter(it -> it >= 0).orElse(idx),
-                            param.map(JsonRpcParam::required).orElse(false));
+                            param.map(JsonRpcParam::required).orElse(false),
+                            param.map(JsonRpcParam::documentation).orElse(""));
                 })
                 .collect(toList()),
             Stream.of(exceptions)
@@ -135,7 +136,7 @@ public class HandlerRegistry {
                                 .collect(toList()),
                             e.code());
                 })
-                .collect(toList())));
+                .collect(toList()), config.documentation()));
     }
 
     private JsonRpcException handleException(final Map<Class<? extends Throwable>, Integer> handledEx, final Throwable exception) {

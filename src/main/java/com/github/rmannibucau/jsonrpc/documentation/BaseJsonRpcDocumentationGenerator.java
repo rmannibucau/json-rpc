@@ -63,26 +63,26 @@ public abstract class BaseJsonRpcDocumentationGenerator implements Runnable {
     protected Map<String, Type> prepareSchema(final Class<?> clazz) {
         final Map<String, Type> fields = new HashMap<>();
         Stream.of(clazz.getMethods())
-                .filter(it -> (it.getName().startsWith("get") || it.getName().startsWith("is")) && it.getName().length() > 2)
-                .filter(it -> it.getDeclaringClass() != Object.class)
-                .forEach(m -> {
-                    final String key = of(decapitalize(m.getName().startsWith("get") ?
-                                m.getName().substring(3) : m.getName().substring(2)))
-                            .map(name -> ofNullable(m.getAnnotation(JsonbProperty.class))
-                                .map(JsonbProperty::value)
-                                .orElseGet(() -> {
-                                    try {
-                                        return ofNullable(clazz.getDeclaredField(name))
-                                                .map(f -> f.getAnnotation(JsonbProperty.class))
-                                                .map(JsonbProperty::value)
-                                                .orElse(name);
-                                    } catch (final NoSuchFieldException e) {
-                                        return name;
-                                    }
-                                }))
-                            .orElseThrow(IllegalStateException::new);
-                    fields.putIfAbsent(key, m.getGenericReturnType());
-                });
+            .filter(it -> (it.getName().startsWith("get") || it.getName().startsWith("is")) && it.getName().length() > 2)
+            .filter(it -> it.getDeclaringClass() != Object.class)
+            .forEach(m -> {
+                final String key = of(decapitalize(m.getName().startsWith("get") ?
+                            m.getName().substring(3) : m.getName().substring(2)))
+                    .map(name -> ofNullable(m.getAnnotation(JsonbProperty.class))
+                        .map(JsonbProperty::value)
+                        .orElseGet(() -> {
+                            try {
+                                return ofNullable(clazz.getDeclaredField(name))
+                                        .map(f -> f.getAnnotation(JsonbProperty.class))
+                                        .map(JsonbProperty::value)
+                                        .orElse(name);
+                            } catch (final NoSuchFieldException e) {
+                                return name;
+                            }
+                        }))
+                    .orElseThrow(IllegalStateException::new);
+                fields.putIfAbsent(key, m.getGenericReturnType());
+            });
         Class<?> current = clazz;
         while (current != null && current != Object.class) {
             Stream.of(current.getDeclaredFields())
@@ -96,38 +96,39 @@ public abstract class BaseJsonRpcDocumentationGenerator implements Runnable {
     }
 
     private Stream<Registration> forRegistrations() {
-        return endpoints.stream()
-                .flatMap(this::toRegistration);
+        return endpoints.stream().flatMap(this::toRegistration);
     }
 
     private Stream<Registration> toRegistration(final Class<?> aClass) {
         return Stream.of(aClass.getMethods())
-                .filter(it -> it.isAnnotationPresent(JsonRpcMethod.class))
-                .map(method -> {
-                    final AtomicInteger idx = new AtomicInteger(-1);
-                    return new Registration(
-                        of(method.getAnnotation(JsonRpcMethod.class).value())
-                                .filter(m -> !m.isEmpty())
-                                .orElse(method.getDeclaringClass().getName() + "." + method.getName()),
-                            extractRealType(method.getGenericReturnType()),
-                        a -> null,
-                        Stream.of(method.getParameters())
-                                .map(p -> {
-                                    final Optional<JsonRpcParam> conf = ofNullable(p.getAnnotation(JsonRpcParam.class));
-                                    idx.incrementAndGet();
-                                    return new Registration.Parameter(
-                                            extractRealType(p.getParameterizedType()),
-                                            conf.map(JsonRpcParam::value).filter(it -> !it.isEmpty()).orElseGet(p::getName),
-                                            conf.map(JsonRpcParam::position).filter(it -> it >= 0).orElseGet(idx::get),
-                                            conf.map(JsonRpcParam::required).orElse(false));
-                                })
-                                .collect(toList()),
-                        ofNullable(method.getAnnotationsByType(JsonRpcException.class))
-                                .map(ex -> Stream.of(ex)
-                                        .map(e -> new Registration.ExceptionMapping(asList(e.handled()), e.code()))
-                                        .collect(toList()))
-                                .orElseGet(Collections::emptyList));
-                });
+            .filter(it -> it.isAnnotationPresent(JsonRpcMethod.class))
+            .map(method -> {
+                final AtomicInteger idx = new AtomicInteger(-1);
+                final Optional<JsonRpcMethod> config = of(method.getAnnotation(JsonRpcMethod.class));
+                return new Registration(
+                    config.map(JsonRpcMethod::value).filter(m -> !m.isEmpty())
+                        .orElse(method.getDeclaringClass().getName() + "." + method.getName()),
+                        extractRealType(method.getGenericReturnType()),
+                    a -> null,
+                    Stream.of(method.getParameters())
+                        .map(p -> {
+                            final Optional<JsonRpcParam> conf = ofNullable(p.getAnnotation(JsonRpcParam.class));
+                            idx.incrementAndGet();
+                            return new Registration.Parameter(
+                                extractRealType(p.getParameterizedType()),
+                                conf.map(JsonRpcParam::value).filter(it -> !it.isEmpty()).orElseGet(p::getName),
+                                conf.map(JsonRpcParam::position).filter(it -> it >= 0).orElseGet(idx::get),
+                                conf.map(JsonRpcParam::required).orElse(false),
+                                conf.map(JsonRpcParam::documentation).orElse(""));
+                        })
+                        .collect(toList()),
+                    ofNullable(method.getAnnotationsByType(JsonRpcException.class))
+                        .map(ex -> Stream.of(ex)
+                                .map(e -> new Registration.ExceptionMapping(asList(e.handled()), e.code()))
+                                .collect(toList()))
+                        .orElseGet(Collections::emptyList),
+                    config.map(JsonRpcMethod::documentation).orElse(""));
+            });
     }
 
     private Type extractRealType(final Type type) {

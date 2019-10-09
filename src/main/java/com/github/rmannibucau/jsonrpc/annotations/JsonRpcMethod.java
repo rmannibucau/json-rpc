@@ -9,5 +9,15 @@ import java.lang.annotation.Target;
 @Target(METHOD)
 @Retention(RUNTIME)
 public @interface JsonRpcMethod {
+    /**
+     * @return JSON-RPC method (identifier).
+     */
     String value() default "";
+
+    /**
+     * Mainly to auto-document the code and the documentation generator.
+     *
+     * @return some explanation about this method.
+     */
+    String documentation() default "";
 }

@@ -56,7 +56,8 @@ class JsonRpcHandlerTest {
                 JsonObject.class,
                 args -> Json.createObjectBuilder().add("message", "i am here").build(),
                 emptyList(),
-                emptyList()));
+                emptyList(),
+                ""));
         handle("{\"jsonrpc\":\"2.0\",\"method\":\"custom\"}", "200\n{\"jsonrpc\":\"2.0\",\"result\":{\"message\":\"i am here\"}}");
         custom.close();
     }

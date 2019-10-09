@@ -1,6 +1,7 @@
 package com.github.rmannibucau.jsonrpc.documentation;
 
 import static java.util.Comparator.comparing;
+import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.joining;
 
 import java.io.IOException;
@@ -63,11 +64,16 @@ public class AsciidoctorJsonRpcDocumentationGenerator extends BaseJsonRpcDocumen
     @Override
     protected String toString(final Registration registration) {
         return "=== " + registration.getJsonRpcMethod() + "\n\n" +
+                ofNullable(registration.getDocumentation())
+                        .filter(it -> !it.isEmpty())
+                        .map(doc -> doc + "\n\n")
+                        .orElse("") +
                 (registration.getParameters().isEmpty() ?
                     "" :
-                    ("==== Parameters\n\n[cols=\"headers\"]\n|===\n|Name|Position|Type|Required\n" +
+                    ("==== Parameters\n\n[cols=\"headers\"]\n|===\n|Name|Position|Type|Required|Documentation\n" +
                         registration.getParameters().stream()
-                            .map(p -> '|' + p.getName() + '|' + p.getPosition() + '|' + asString(p.getType()) + '|' + p.isRequired())
+                            .map(p -> '|' + p.getName() + '|' + p.getPosition() + '|' + asString(p.getType()) + '|' + p.isRequired() +
+                                '|' + ofNullable(p.getDocumentation()).filter(it -> !it.isEmpty()).orElse("-"))
                             .collect(joining("\n")) + "\n|===\n\n")) +
                 "==== Result type\n\n`" + asString(registration.getReturnedType()) + "`\n\n";
     }

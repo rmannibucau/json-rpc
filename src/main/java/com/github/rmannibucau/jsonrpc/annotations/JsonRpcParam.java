@@ -25,4 +25,11 @@ public @interface JsonRpcParam {
      * @return if required the method will fail if it is missing.
      */
     boolean required() default false;
+
+    /**
+     * Mainly to auto-document the code and the documentation generator.
+     *
+     * @return some explanation about this parameter.
+     */
+    String documentation() default "";
 }
