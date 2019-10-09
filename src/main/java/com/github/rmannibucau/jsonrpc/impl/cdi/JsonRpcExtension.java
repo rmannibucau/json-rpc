@@ -124,6 +124,10 @@ public class JsonRpcExtension implements Extension {
             return;
         }
 
+        ofNullable(doLookup(beanManager, configurationBean).getSpecificationMethod())
+                .filter(it -> !it.isEmpty())
+                .ifPresent(registry::registerSpecificationMethod);
+
         if (jsonbBean == null) { // unlikely but just a guard
             jsonbBean = (Bean<Jsonb>) beanManager.resolve(beanManager.getBeans(Jsonb.class, JsonRpc.Literal.INSTANCE));
         }

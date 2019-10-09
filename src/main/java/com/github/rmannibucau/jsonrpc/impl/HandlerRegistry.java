@@ -1,8 +1,11 @@
 package com.github.rmannibucau.jsonrpc.impl;
 
+import static java.util.Collections.emptyList;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -15,6 +18,7 @@ import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -34,18 +38,60 @@ import javax.json.spi.JsonProvider;
 import com.github.rmannibucau.jsonrpc.annotations.JsonRpcMethod;
 import com.github.rmannibucau.jsonrpc.annotations.JsonRpcParam;
 import com.github.rmannibucau.jsonrpc.protocol.JsonRpcException;
+import com.github.rmannibucau.jsonrpc.protocol.Specification;
 
 @Vetoed
 public class HandlerRegistry {
     private static final Object[] EMPTY_ARGS = new Object[0];
 
-    private final Map<String, Function<JsonStructure, CompletionStage<JsonValue>>> handlers = new ConcurrentHashMap<>();
+    private final Map<String, JsonRpcMethodRegistration> handlers = new ConcurrentHashMap<>();
 
     private Jsonb jsonb;
     private JsonProvider jsonProvider;
 
-    public Map<String, Function<JsonStructure, CompletionStage<JsonValue>>> getHandlers() {
+    public Map<String, JsonRpcMethodRegistration> getHandlers() {
         return handlers;
+    }
+
+    public Specification createSpecification() {
+        final Specification specification = new Specification();
+        specification.setMethods(handlers.entrySet().stream()
+            .map(mtd -> {
+                final Registration registration = mtd.getValue().getRegistration();
+
+                final Specification.MethodSpecification ms = new Specification.MethodSpecification();
+                ms.setMethod(mtd.getKey());
+                ms.setDocumentation(registration.getDocumentation());
+                ms.setParameters(registration.getParameters().stream()
+                    .map(p -> {
+                        final Specification.ParameterSpecification param = new Specification.ParameterSpecification();
+                        param.setDescription(p.getDocumentation());
+                        param.setName(p.getName());
+                        param.setPosition(p.getPosition());
+                        return param;
+                    })
+                    .collect(toList()));
+                ms.setExceptions(registration.getExceptionMappings().stream()
+                    .map(p -> {
+                        final Specification.ExceptionSpecification param = new Specification.ExceptionSpecification();
+                        param.setDescription(p.getDocumentation());
+                        param.setCode(p.getCode());
+                        return param;
+                    })
+                    .collect(toList()));
+                return ms;
+            })
+            .collect(toMap(Specification.MethodSpecification::getMethod, identity(), (a, b) -> {
+                throw new IllegalArgumentException(a + " can't be merged with " + b);
+            }, TreeMap::new)));
+        return specification;
+    }
+
+    public Unregisterable registerSpecificationMethod(final String methodId) {
+        return registerMethod(new Registration(
+                requireNonNull(methodId, "Method can't be null"),
+                Specification.class, ignored -> createSpecification(), emptyList(), emptyList(),
+                "Returns the available methods specification."));
     }
 
     public Unregisterable registerMethod(final Registration registration) {
@@ -77,7 +123,7 @@ public class HandlerRegistry {
                                     CompletionException.class.isInstance(error) && error.getCause() != null ? error.getCause() : error);
                         }));
         final String jsonRpcMethod = registration.getJsonRpcMethod();
-        if (handlers.putIfAbsent(jsonRpcMethod, handler) != null) {
+        if (handlers.putIfAbsent(jsonRpcMethod, new JsonRpcMethodRegistration(registration, handler)) != null) {
             throw new IllegalArgumentException("Ambiguous method: '" + jsonRpcMethod + "'");
         }
         return () -> handlers.remove(jsonRpcMethod);
@@ -91,7 +137,6 @@ public class HandlerRegistry {
         }
         final Parameter[] types = method.getParameters();
         final AtomicInteger paramIdx = new AtomicInteger(0);
-        final AtomicInteger exceptionIdx = new AtomicInteger(0);
         return registerMethod(new Registration(
             of(config.value())
                     .filter(it -> !it.isEmpty())
@@ -126,16 +171,10 @@ public class HandlerRegistry {
                 })
                 .collect(toList()),
             Stream.of(exceptions)
-                .map(e -> {
-                    final int idx = exceptionIdx.getAndIncrement();
-                    final Optional<com.github.rmannibucau.jsonrpc.annotations.JsonRpcException> param = ofNullable(exceptions[idx]);
-                    return new Registration.ExceptionMapping(
-                            param.map(com.github.rmannibucau.jsonrpc.annotations.JsonRpcException::handled)
-                                .map(Stream::of)
-                                .orElseGet(Stream::empty)
-                                .collect(toList()),
-                            e.code());
-                })
+                .map(e -> new Registration.ExceptionMapping(
+                        Stream.of(e.handled()).collect(toList()),
+                        e.code(),
+                        e.documentation()))
                 .collect(toList()), config.documentation()));
     }
 
@@ -283,5 +322,24 @@ public class HandlerRegistry {
     @FunctionalInterface
     public interface Unregisterable extends AutoCloseable {
         void close();
+    }
+
+    public static class JsonRpcMethodRegistration {
+        private final Registration registration;
+        private final Function<JsonStructure, CompletionStage<JsonValue>> executor;
+
+        private JsonRpcMethodRegistration(final Registration registration,
+                                          final Function<JsonStructure, CompletionStage<JsonValue>> executor) {
+            this.registration = registration;
+            this.executor = executor;
+        }
+
+        public Registration getRegistration() {
+            return registration;
+        }
+
+        public Function<JsonStructure, CompletionStage<JsonValue>> getExecutor() {
+            return executor;
+        }
     }
 }

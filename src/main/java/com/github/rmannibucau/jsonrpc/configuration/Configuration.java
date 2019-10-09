@@ -7,6 +7,15 @@ public class Configuration {
     private String jsonRpcVersion = "2.0";
     private long timeout = 30000L;
     private boolean active = true;
+    private String specificationMethod = "jsonrpc.specification";
+
+    public String getSpecificationMethod() {
+        return specificationMethod;
+    }
+
+    public void setSpecificationMethod(final String specificationMethod) {
+        this.specificationMethod = specificationMethod;
+    }
 
     public boolean isActive() {
         return active;

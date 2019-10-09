@@ -18,6 +18,13 @@ public @interface JsonRpcException {
      */
     int code();
 
+    /**
+     * Mainly to auto-document the code and the documentation generator.
+     *
+     * @return some explanation about this exception case.
+     */
+    String documentation() default "";
+
     @Target(METHOD)
     @Retention(RUNTIME)
     @interface List {

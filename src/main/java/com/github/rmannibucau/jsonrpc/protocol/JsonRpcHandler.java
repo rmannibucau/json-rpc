@@ -87,7 +87,9 @@ public class JsonRpcHandler {
         return doValidate(request)
             .map(CompletableFuture::completedFuture)
             .orElseGet(() -> {
-                final Function<JsonStructure, CompletionStage<JsonValue>> fn = registry.getHandlers().get(request.getString("method"));
+                final Function<JsonStructure, CompletionStage<JsonValue>> fn =
+                        registry.getHandlers().get(request.getString("method"))
+                        .getExecutor();
                 final String id = ofNullable(request.getJsonString("id")).map(JsonString::getString).orElse(null);
                 final JsonStructure params = ofNullable(request.get("params")).map(JsonStructure.class::cast).orElse(null);
 

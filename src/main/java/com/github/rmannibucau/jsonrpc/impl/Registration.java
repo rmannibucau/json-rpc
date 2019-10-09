@@ -55,10 +55,17 @@ public class Registration {
     public static class ExceptionMapping {
         private final Collection<Class<? extends Throwable>> types;
         private final int code;
+        private final String documentation;
 
-        public ExceptionMapping(final Collection<Class<? extends Throwable>> types, final int code) {
+        public ExceptionMapping(final Collection<Class<? extends Throwable>> types, final int code,
+                                final String documentation) {
             this.types = types;
             this.code = code;
+            this.documentation = documentation;
+        }
+
+        public String getDocumentation() {
+            return documentation;
         }
 
         public Collection<Class<? extends Throwable>> getTypes() {

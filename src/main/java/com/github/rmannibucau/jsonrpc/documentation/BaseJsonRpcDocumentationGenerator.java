@@ -124,7 +124,7 @@ public abstract class BaseJsonRpcDocumentationGenerator implements Runnable {
                         .collect(toList()),
                     ofNullable(method.getAnnotationsByType(JsonRpcException.class))
                         .map(ex -> Stream.of(ex)
-                                .map(e -> new Registration.ExceptionMapping(asList(e.handled()), e.code()))
+                                .map(e -> new Registration.ExceptionMapping(asList(e.handled()), e.code(), e.documentation()))
                                 .collect(toList()))
                         .orElseGet(Collections::emptyList),
                     config.map(JsonRpcMethod::documentation).orElse(""));
